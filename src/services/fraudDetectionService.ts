@@ -13,21 +13,27 @@ export const calculateRiskScore = (input: TransactionInput): number => {
   )) {
     riskScore += 0.6; // High risk if email domain is blocked
   } else {
+     /**
+     * Here we can add more filters for domain age using ipQualityScore API 
+     * If domain age is less than 3 months then we can add more risk score
+     * If domain age is more than 6 months then we can add moderate risk score
+     * If domain age is more than 1 year then we can add less risk score
+     */
     riskScore += 0.1; // Low risk if email domain is not blocked
   }
 
   // Transaction amount check
-   /**
-     * Here we can check multiple things:
-     * 1. Transaction request location 
-     * 2. Transaction request IP address
-     * 3. Transaction request device ID
-     * 4. Transaction request user pattern
-   */
   const filterSuccessTransactions = userTransactions.filter(transaction => transaction.status === 'success');
   if (filterSuccessTransactions.length > 0) {
     const avgAmount = filterSuccessTransactions.reduce((sum, tx) => sum + tx.amount, 0) / filterSuccessTransactions.length;
-    if (input.amount > 2 * avgAmount) {
+    /**
+     * Here we can add more filters for large transaction amount:
+     * 1. Transaction request location (country, region, city)
+     * 2. Transaction request IP address(ipQualityScore API can help us)
+     * 3. Transaction request device ID
+     * 4. Transaction request user pattern
+    */
+    if (input.amount > avgAmount) {
       riskScore += 0.3; // High risk if transaction amount is more than twice the average amount of recent transactions
     } else {
       riskScore += 0.1; // Low risk if transaction amount is less than twice the average amount of recent transactions
@@ -47,10 +53,10 @@ export const calculateRiskScore = (input: TransactionInput): number => {
     
     // Check if all last three transactions were failed
     if (lastThree.every(tx => tx.status === 'failed')) {
-      // Check if the last transaction was within the last 24 hours
       const lastTxTime = lastThree[lastThree.length - 1].timestamp;
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      
+
+      // Check if the last transaction was within the last 24 hours      
       if (lastTxTime > twentyFourHoursAgo) {
         riskScore += 0.6; // High risk if all recent transactions failed and attempted within the 24 hours
       } else {
